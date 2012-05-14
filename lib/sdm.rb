@@ -6,7 +6,7 @@ require File.expand_path('../trollop', __FILE__)
 
 module Sdm
 
-  SUB_COMMANDS = %w(status envs delete copy)
+  SUB_COMMANDS = %w(st status envs migrate exec new drop)
   SCHEMA_VERSIONS = "schema-versions"
 
   class Start
@@ -51,6 +51,9 @@ module Sdm
       if s = opts[:schema]
         cmd += "-Dschemas=#{s} "
         cmd += "-D#{s}.password=#{password} "
+        if tv = opts[:target]
+          cmd += "-D#{s}.targetVersion=#{tv} "
+        end
       else
         config["schemas"].split(",").each do |s| 
           s.strip!
@@ -59,6 +62,18 @@ module Sdm
       end
 
       cmd += "stack-db:#{task}"
+
+      system cmd
+    end
+
+    def new(opts)
+      s = opts[:schema]
+      cmd = "mvn -q " +
+        "-Ddb.configurationFile=pom.properties " + # must define one
+        "-Dschemas=#{s} " +
+        "-D#{s}.password=blah " + # hangs if none is given
+        "-Ddescription=\"#{opts[:name]}\" " +
+        "stack-db:new"
 
       system cmd
     end
@@ -83,33 +98,47 @@ module Sdm
       end
       
       cmd = ARGV.shift # get the subcommand
-      cmd_opts = case cmd
-        when "status"
+      case cmd
+        when "status", "st"
           opts = Trollop::options do
-            banner "Run mvn stack-db:status"
+            banner "status: mvn stack-db:status".green
+            banner ""
             opt :schema, "Specify schema. Default is read from schemas property.",
               :short => "-s", :type => :string
           end
           mvn("status", opts)
+        when "migrate"
+          opts = Trollop::options do
+            banner "migrate: mvn stack-db:migrate".green
+            banner ""
+            opt :schema, "Specify schema. Default is read from schemas property.",
+              :short => "-s", :type => :string
+            opt :target, "Target version. Requires schema.", 
+              :short => "-t", :type => :int
+          end
+          if opts[:target] && !opts[:schema]
+            Trollop::die :schema, "required when target specified"
+          end
+          mvn("migrate", opts)
+        when "new"
+          opts = Trollop::options do
+            banner "new: mvn stack-db:new".green
+            banner <<-EOS
+Create a new migration file.
+
+EOS
+            opt :schema, "Specify schema. Required.",
+              :short => "-s", :type => :string, :required => true
+            opt :name, "Name of new script. Required",
+              :short => "-n", :type => :string, :required => true
+          end
+          new(opts)
         when "envs"
           environments
-        when "delete" # parse delete options
-          Trollop::options do
-            banner "Delete thingy"
-            opt :force, "Force deletion"
-          end
-        when "copy"  # parse copy options
-          Trollop::options do
-            opt :double, "Copy twice for safety's sake"
-          end
         else
           Trollop::die "unknown subcommand #{cmd.inspect}"
-        end
+      end
       
-      #puts "Global options: #{global_opts.inspect}"
-      #puts "Subcommand: #{cmd.inspect}"
-      #puts "Subcommand options: #{cmd_opts.inspect}"
-      #puts "Remaining arguments: #{ARGV.inspect}"
     end
 
   end

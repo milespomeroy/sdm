@@ -4,6 +4,7 @@
 ## License::   the same terms as ruby itself
 
 require 'date'
+require File.expand_path('../sdm/color', __FILE__)
 
 module Trollop
 
@@ -512,9 +513,9 @@ class Parser
   ## The per-parser version of Trollop::die (see that for documentation).
   def die arg, msg
     if msg
-      $stderr.puts "Error: argument --#{@specs[arg][:long]} #{msg}."
+      $stderr.puts "Error: ".red + "argument --#{@specs[arg][:long]} #{msg}."
     else
-      $stderr.puts "Error: #{arg}."
+      $stderr.puts "Error: ".red + "#{arg}."
     end
     $stderr.puts "Try --help for help."
     exit(-1)
@@ -739,7 +740,7 @@ def with_standard_exception_handling parser
   begin
     yield
   rescue CommandlineError => e
-    $stderr.puts "Error: #{e.message}."
+    $stderr.puts "Error: ".red + "#{e.message}."
     $stderr.puts "Try --help for help."
     exit(-1)
   rescue HelpNeeded
