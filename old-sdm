@@ -1,0 +1,181 @@
+#!/usr/bin/env ruby
+# Stack DB Migrator Helper
+# Wraps the mvn commands for the stack db migrator to make it easier to use.
+
+# Extend String to add color
+class String
+  def green
+    "[32m" + self + "[0m"
+  end
+  def red
+    "[31m" + self + "[0m"
+  end
+end
+
+schema = "lis3pom"
+database = "lisdv3"
+password = `pw get #{schema} #{database}`.chomp!
+# chdir_to_parent_containing
+def switch_to_base
+  home_dir = File.expand_path("~")
+  
+  dir = Dir.pwd.split("/")
+  
+  # find db migrator director in parent directories
+  dir.size.times do |x|
+    d = dir.join("/")
+    if Dir.entries(d).include?("schema-versions")
+      Dir.chdir(d)
+      puts Dir.pwd.green
+      break
+    end
+    if d === home_dir
+      puts "ERROR: ".red + 
+        "Not a db migrator directory (or any of the parent directories)"
+      exit 1
+    end
+    dir.pop
+  end
+end
+
+# mvn stack-db:status
+switch_to_base
+
+p ARGV
+#system "mvn -q " +
+#  "-DLIS3.password=#{password} " +
+#  "-DDATAFIX.password=#{password} " +
+#  "-DDEV.password=#{password} " +
+#  "-DSTG.password=#{password} " +
+#  "-Ddb.configurationFile=etl-pom.properties " +
+#  "-Doracle.net.tns_admin=$TNS_ADMIN " +
+#  "stack-db:status " +
+#  "| grcat conf.sdm"
+
+# ./sdm -me dev
+# -m = migrate
+# -d = drop
+# -s = status
+# -x = execute
+# -n = new
+# -e ENVIRONMENT
+
+#while getopts "mdse:" flag
+#do
+#  case "$flag" in
+#    m)
+#      if [[ -z "$task" ]]
+#      then
+#        task="migrate"
+#      else
+#        echo "Can't request multiple tasks."
+#        exit 6
+#      fi
+#      ;;
+#    d)
+#      if [[ -z "$task" ]]
+#      then
+#        task="drop"
+#      else
+#        echo "Can't request multiple tasks."
+#        exit 6
+#      fi
+#      ;;
+#    s)
+#      if [[ -z "$task" ]]
+#      then
+#        task="status"
+#      else
+#        echo "Can't request multiple tasks."
+#        exit 6
+#      fi
+#      ;;
+#    e)
+#      if [[ -z "$abbrev" ]]
+#      then
+#        abbrev="$OPTARG"
+#      else
+#        echo "Can't have multiple environments."
+#        exit 5
+#      fi
+#      case "$abbrev" in
+#        dev)
+#          schema="lis3"
+#          service="a019"
+#          ;;
+#        stg)
+#          schema="lis3"
+#          service="lissg3"
+#          ;;
+#        prd)
+#          schema="lis3"
+#          service="a077"
+#          ;;
+#        mdm)
+#          schema="lis3mdm"
+#          service="a019"
+#          ;;
+#        ft)
+#          schema="lis3ft"
+#          service="a019"
+#          ;;
+#        pom)
+#          schema="lis3pom"
+#          service="a019"
+#          ;;
+#        rpt)
+#          schema="lis3rpt"
+#          service="a019"
+#          ;;
+#        *)
+#          echo "Environment not recognized."
+#          exit 3
+#          ;;
+#      esac
+#      ;;
+#    [?])
+#      echo "Option not recognized."
+#      exit 2
+#      ;;
+#  esac
+#done
+#
+## defaults
+##: ${AFLAG=$AFLAG_DEFAULT}
+#: ${scriptsToMigrate=''}
+#
+## validation
+#
+#if [[ -z $task ]]
+#then
+#  echo "Give me a task: 
+#-m = migrate
+#-r = remigrate"
+#  exit 1
+#fi
+#
+#if [[ -z $abbrev || -z $schema || -z $service ]]
+#then
+#  echo "Give me an environment, like \"-e dev\" or \"-e ft\""
+#  exit 4
+#fi
+#
+#tempfile=`mktemp -t etl`
+#
+#mvn -q \
+#    -DLIS3.password=`pw get $schema $service` \
+#    -DETL.password=`pw get $schema $service` \
+#    -DDATAFIX.password=`pw get $schema $service` \
+#    -DDEV.password=`pw get $schema $service` \
+#    -DSTG.password=`pw get $schema $service` \
+#    -Ddb.configurationFile=etl-$abbrev.properties \
+#    -Doracle.net.tns_admin=$TNS_ADMIN \
+#    -Ddb.scriptsToMigrate=$scriptsToMigrate \
+#    stack-db:$task | tee $tempfile | grcat conf.sdm
+#echo "Task Logged to: $tempfile"
+#
+#if [[ -z $silence ]]
+#then
+#  growlnotify -m "$task of $schema on $service" "Done"
+#  afplay $HOME/Dropbox/tokyotrainon.aif &>/dev/null &
+#fi

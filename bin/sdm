@@ -1,0 +1,5 @@
+#!/usr/bin/env ruby
+require 'sdm'
+
+sdm = Sdm::Start.new
+sdm.run
