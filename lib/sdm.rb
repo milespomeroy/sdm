@@ -58,10 +58,14 @@ module Sdm
         end
       end
 
-      if task == "execute"
-        script = ARGV.shift
-        cmd += "-Ddb.scriptToExecute=#{script} "
+      case task 
+        when "execute"
+          script = ARGV.shift
+          cmd += "-Ddb.scriptToExecute=#{script} "
+        when "drop"
+          cmd += "-Ddb.dropScript=#{config["db.dropScript"]} "
       end
+
 
       cmd += "stack-db:#{task}"
 

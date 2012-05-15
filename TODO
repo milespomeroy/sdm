@@ -6,3 +6,4 @@ TODO
   maybe save an encrypted form of the password in the properties files
 - talk to Bruce Campbell about the new task
   have him not require a password and properties file
+- talk to Bruce about drop not repecting db.dropScript in properties files
