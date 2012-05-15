@@ -1,0 +1,6 @@
+TODO
+====
+
+- gemspec
+- remove dependency on `pw` for passwords
+  maybe save an encrypted form of the password in the properties files

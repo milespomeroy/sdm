@@ -6,7 +6,7 @@ require File.expand_path('../trollop', __FILE__)
 
 module Sdm
 
-  SUB_COMMANDS = %w(st status envs migrate exec new drop)
+  SUB_COMMANDS = %w(st status envs migrate exec execute x new drop mi)
   SCHEMA_VERSIONS = "schema-versions"
 
   class Start
@@ -30,14 +30,11 @@ module Sdm
       properties_file = "#{Sdm::SCHEMA_VERSIONS}/#{env}.properties"
 
       unless File.exists?(properties_file)
-        puts "Bad environment given.".red
-        environments
-        exit 1
+        Trollop::die "Bad environment given"
       end
 
       config = parseconf("#{Sdm::SCHEMA_VERSIONS}/base-db.properties")
-      sconfig = parseconf(properties_file)
-      config.merge!(sconfig)
+      config.merge!(parseconf(properties_file))
       schema = config['owningSchema']
       database = config['database']
       password = `pw get #{schema} #{database}`.chomp!
@@ -59,6 +56,11 @@ module Sdm
           s.strip!
           cmd += "-D#{s}.password=#{password} "
         end
+      end
+
+      if task == "execute"
+        script = ARGV.shift
+        cmd += "-Ddb.scriptToExecute=#{script} "
       end
 
       cmd += "stack-db:#{task}"
@@ -86,15 +88,36 @@ module Sdm
         exit 1
       end
 
-      global_opts = Trollop::options do
-        banner "Stack DB Migrator Helper"
+      global = Trollop::Parser.new do
+        banner "Stack DB Migrator Helper".green
         banner ""
-        banner "Wraps the mvn commands for the stack db migrator"
-        banner "to make it easier to use."
+        banner <<-EOS
+Wraps the mvn command for the [LDS Stack DB Migrator][1] to make it easier to use.
+
+[1]: http://code.lds.org/maven-sites/stack/module.html?module=db-migrator
+
+Commands:
+
+    envs              Show available environments to run migrations on.
+    status    st      Display status of database. See pending migrations.
+    migrate   mi      Apply scripts in queue to bring database to target.
+    execute   exec x  Run specified script ad hoc. Without logging.
+    new               Create a new blank script with timestamp in name.
+    drop              Delete all objects in the database.
+
+See `sdm <command> -h` to get additional help and usage on a specific command.
+
+Global Options:
+EOS
         banner ""
-        version "0.1"
-        opt :dry_run, "Don't actually do anything", :short => "-n"
+        version "0.5 Beta"
         stop_on Sdm::SUB_COMMANDS
+      end
+
+      global_opts = Trollop::with_standard_exception_handling global do
+        o = global.parse ARGV
+        raise Trollop::HelpNeeded if ARGV.empty?
+        o
       end
       
       cmd = ARGV.shift # get the subcommand
@@ -103,13 +126,29 @@ module Sdm
           opts = Trollop::options do
             banner "status: mvn stack-db:status".green
             banner ""
+            banner <<-EOS
+usage: sdm status ENV [-s SCHEMA]
+
+Check the status of a database environment. Returns status of each schema listed in the 'schemas' attribute of the properties file for the environment, unless a schema is specified with the command.
+
+Example: sdm status stg -s DEFAULT
+EOS
+            banner ""
             opt :schema, "Specify schema. Default is read from schemas property.",
               :short => "-s", :type => :string
           end
           mvn("status", opts)
-        when "migrate"
+        when "migrate", "mi"
           opts = Trollop::options do
             banner "migrate: mvn stack-db:migrate".green
+            banner ""
+            banner <<-EOS
+usage: sdm migrate ENV [-s SCHEMA] [-t VERSION_NUMBER]
+
+Apply scripts found in the schemas' queues to bring a database to the target version number.
+
+Example: sdm migrate stg -s DEFAULT -t 201205151242
+EOS
             banner ""
             opt :schema, "Specify schema. Default is read from schemas property.",
               :short => "-s", :type => :string
@@ -120,23 +159,75 @@ module Sdm
             Trollop::die :schema, "required when target specified"
           end
           mvn("migrate", opts)
+        when "execute", "exec", "x"
+          opts = Trollop::options do
+            banner "execute: mvn stack-db:execute".green
+            banner ""
+            banner <<-EOS
+usage: sdm execute ENV -s SCHEMA SCRIPT
+
+Run a specified SQL script. Execution is not logged. Script must exist in the schema directory specified.
+
+Example: sdm execute stg -s DEFAULT test.sql
+EOS
+            banner ""
+            opt :schema, "Specify schema. Required.",
+              :short => "-s", :type => :string, :required => true
+          end
+          mvn("execute", opts)
+        when "drop"
+          opts = Trollop::options do
+            banner "drop: mvn stack-db:drop".green
+            banner ""
+            banner <<-EOS
+usage: sdm drop ENV [-s SCHEMA]
+
+Delete all objects from the database. Will run on all schemas in the properties file unless a SCHEMA is specified.  Uses the db.dropScript property to identify what script to run. If that is not set it uses the built-in drop script.
+
+Example: sdm drop stg -s DEFAULT
+EOS
+            banner ""
+            opt :schema, "Specify schema.",
+              :short => "-s", :type => :string
+          end
+          mvn("drop", opts)
         when "new"
           opts = Trollop::options do
             banner "new: mvn stack-db:new".green
+            banner ""
             banner <<-EOS
-Create a new migration file.
+usage: sdm new -s SCHEMA -n NAME
+
+Create a new migration file in a schema. The current timestamp is prefixed to the name of the file.
+
+Example: sdm new -s DEFAULT -n "update a table"
 
 EOS
+            banner ""
             opt :schema, "Specify schema. Required.",
               :short => "-s", :type => :string, :required => true
-            opt :name, "Name of new script. Required",
+            opt :name, "Name of new script. Required.",
               :short => "-n", :type => :string, :required => true
           end
           new(opts)
         when "envs"
+          opts = Trollop::options do
+            banner "envs: List available environments.".green
+            banner ""
+            banner <<-EOS
+usage: sdm envs
+
+Lists names of environments that can be used in other commands.  Each environments corresponds to a properties file in the schema-versions directory.
+
+Example: sdm envs
+EOS
+            banner ""
+          end
           environments
         else
-          Trollop::die "unknown subcommand #{cmd.inspect}"
+          puts "Error: ".red + "Unknown command #{cmd.inspect}."
+          puts "See 'sdm --help'."
+          exit 1
       end
       
     end
