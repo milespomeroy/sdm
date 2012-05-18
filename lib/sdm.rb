@@ -74,11 +74,12 @@ module Sdm
 
     def new(opts)
       s = opts[:schema]
+      name = ARGV.shift
       cmd = "mvn -q " +
         "-Ddb.configurationFile=pom.properties " + # must define one
         "-Dschemas=#{s} " +
         "-D#{s}.password=blah " + # hangs if none is given
-        "-Ddescription=\"#{opts[:name]}\" " +
+        "-Ddescription=\"#{name}\" " +
         "stack-db:new"
 
       system cmd
@@ -200,18 +201,16 @@ EOS
             banner "new: mvn stack-db:new".green
             banner ""
             banner <<-EOS
-usage: sdm new -s SCHEMA -n NAME
+usage: sdm new -s SCHEMA [NAME_OF_SCRIPT]
 
 Create a new migration file in a schema. The current timestamp is prefixed to the name of the file.
 
-Example: sdm new -s DEFAULT -n "update a table"
+Example: sdm new -s DEFAULT "update a table"
 
 EOS
             banner ""
             opt :schema, "Specify schema. Required.",
               :short => "-s", :type => :string, :required => true
-            opt :name, "Name of new script. Required.",
-              :short => "-n", :type => :string, :required => true
           end
           new(opts)
         when "envs"
