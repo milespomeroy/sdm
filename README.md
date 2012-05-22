@@ -3,6 +3,11 @@ Stack DB Migrator Helper
 
 Wraps the mvn command for the [LDS Stack DB Migrator][1] to make it easier to use.
 
+Installation
+------------
+
+    [sudo] gem install https://github.com/milespomeroy/sdm/blob/master/sdm-0.5.gem
+
 Commands
 --------
 
