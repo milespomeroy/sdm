@@ -6,7 +6,7 @@ Wraps the mvn command for the [LDS Stack DB Migrator][1] to make it easier to us
 Installation
 ------------
 
-    [sudo] gem install https://github.com/milespomeroy/sdm/blob/master/sdm-0.5.gem
+    [sudo] gem install sdm
 
 Commands
 --------
