@@ -1,13 +1,13 @@
 Gem::Specification.new do |s|
   s.name = "sdm"
-  s.version = "0.5"
-  s.date = "2012-05-22"
+  s.version = "0.6"
+  s.date = "2012-07-23"
   s.summary = "LDS Stack DB Migrator helper"
   s.description = "Wraps the mvn command for the LDS Stack DB Migrator to make it easier to use."
   s.authors = ["Miles Pomeroy"]
   s.email = "miles@nonsensequel.com"
   s.files = %w[
-    README
+    README.md
     TODO
     bin/sdm
     lib/trollop.rb

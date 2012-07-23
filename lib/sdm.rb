@@ -1,3 +1,6 @@
+require 'openssl'
+require 'base64'
+
 # local
 require File.expand_path('../sdm/color', __FILE__)
 require File.expand_path('../sdm/config', __FILE__)
@@ -8,6 +11,7 @@ module Sdm
 
   SUB_COMMANDS = %w(st status envs migrate exec execute x new drop mi)
   SCHEMA_VERSIONS = "schema-versions"
+  PRIVATE_KEY = File.expand_path('~') + "/.db.key"
 
   class Start
 
@@ -35,10 +39,15 @@ module Sdm
 
       config = parseconf("#{Sdm::SCHEMA_VERSIONS}/base-db.properties")
       config.merge!(parseconf(properties_file))
-      schema = config['owningSchema']
-      database = config['database']
-      password = `pw get #{schema} #{database}`.chomp!
 
+      password = ''
+      epass = config['ePassword']
+      if File.exists?(Sdm::PRIVATE_KEY) && !epass.nil?
+
+        private_key = OpenSSL::PKey::RSA.new(File.read(Sdm::PRIVATE_KEY))
+        password = private_key.private_decrypt(Base64.decode64(epass))
+
+      end
 
       cmd = "mvn -q " +
         "-Ddb.configurationFile=#{env}.properties " +
